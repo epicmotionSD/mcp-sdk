@@ -1,0 +1,229 @@
+# @openconductor/mcp-sdk
+
+**The standard SDK for building production-ready MCP servers.**
+
+Stop copy-pasting boilerplate. Get error handling, validation, logging, and telemetry out of the box.
+
+[![npm version](https://badge.fury.io/js/%40openconductor%2Fmcp-sdk.svg)](https://www.npmjs.com/package/@openconductor/mcp-sdk)
+[![Downloads](https://img.shields.io/npm/dw/@openconductor/mcp-sdk)](https://www.npmjs.com/package/@openconductor/mcp-sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+
+## Why This SDK?
+
+Every MCP server needs the same things:
+
+| Feature | Without SDK | With SDK |
+|---------|-------------|----------|
+| **Error Handling** | 50+ lines of JSON-RPC formatting | Built-in, spec-compliant |
+| **Input Validation** | Manual checks, type-unsafe | Zod schemas, fully typed |
+| **Logging** | console.log chaos | Structured JSON, log-aggregator ready |
+| **Telemetry** | Flying blind | One-line setup, real dashboards |
+| **Timeouts** | None (hung requests) | Automatic with configurable limits |
+
+All in **~15kb**, zero config required.
+
+## Install
+
+```bash
+npm install @openconductor/mcp-sdk
+```
+
+**Requirements:** Node.js 18+
+
+## Quick Start
+
+```typescript
+import { 
+  wrapTool, 
+  validateInput, 
+  z, 
+  createLogger,
+  initTelemetry 
+} from '@openconductor/mcp-sdk'
+
+// Optional: Enable observability
+initTelemetry({
+  apiKey: 'oc_xxx',  // Get free key at openconductor.dev
+  serverName: 'my-server',
+  serverVersion: '1.0.0'
+})
+
+// Create a validated, wrapped tool in seconds
+const searchTool = wrapTool(
+  validateInput(
+    z.object({
+      query: z.string().min(1),
+      limit: z.number().int().positive().default(10)
+    }),
+    async (input) => {
+      // input is typed: { query: string, limit: number }
+      return { results: await db.search(input.query, input.limit) }
+    }
+  ),
+  { name: 'search', timeout: 5000 }
+)
+
+// Automatic error handling, logging, and telemetry
+const result = await searchTool({ query: 'hello', limit: 5 })
+```
+
+## Features
+
+### 🛡️ Error Handling
+
+JSON-RPC 2.0 compliant errors with rich context:
+
+```typescript
+import { ValidationError, ToolExecutionError } from '@openconductor/mcp-sdk/errors'
+
+throw new ValidationError('amount', 'Must be positive', -5)
+// → { code: -32602, message: "Validation failed...", data: { field, reason, value } }
+```
+
+**10 error types included:** ValidationError, ToolNotFoundError, ToolExecutionError, ResourceNotFoundError, AuthenticationError, AuthorizationError, RateLimitError, TimeoutError, DependencyError, ConfigurationError
+
+[→ Error Handling Guide](./docs/errors.md)
+
+### ✅ Validation
+
+Zod-powered with MCP-specific helpers:
+
+```typescript
+import { validateInput, z, schemas } from '@openconductor/mcp-sdk'
+
+const handler = validateInput(
+  z.object({
+    query: schemas.nonEmptyString,
+    limit: schemas.limit,      // 1-100, default 10
+    email: schemas.email,
+    url: schemas.url,
+  }),
+  async (input) => doSomething(input)  // Fully typed!
+)
+```
+
+[→ Validation Guide](./docs/validation.md)
+
+### 📝 Logging
+
+Structured JSON that works with any log aggregator:
+
+```typescript
+import { createLogger } from '@openconductor/mcp-sdk/logger'
+
+const log = createLogger('my-server', { level: 'info', pretty: true })
+
+log.info('Tool invoked', { tool: 'search', userId: 'abc' })
+// {"timestamp":"...","level":"info","service":"my-server","message":"Tool invoked","tool":"search","userId":"abc"}
+
+const toolLog = log.child({ requestId: 'req_123' })  // Scoped context
+```
+
+### 🔧 Server Utilities
+
+Health checks and tool wrappers:
+
+```typescript
+import { createHealthCheck, wrapTool } from '@openconductor/mcp-sdk/server'
+
+// Standard health endpoint
+const healthCheck = createHealthCheck({
+  name: 'my-server',
+  version: '1.0.0',
+  checks: {
+    database: async () => db.ping(),
+    redis: async () => redis.ping(),
+  }
+})
+// → { status: 'healthy', checks: { database: true, redis: true }, ... }
+
+// Wrap any handler with production features
+const safeTool = wrapTool(myHandler, {
+  name: 'my-tool',
+  timeout: 5000,  // Auto-timeout
+})
+```
+
+### 📊 Telemetry
+
+Optional observability for production:
+
+```typescript
+import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
+
+initTelemetry({
+  apiKey: 'oc_xxx',           // Free tier at openconductor.dev
+  serverName: 'my-server',
+  serverVersion: '1.0.0',
+})
+
+// All wrapped tools automatically report:
+// ✓ Invocation counts
+// ✓ Success/failure rates
+// ✓ Latency percentiles (p50, p95, p99)
+// ✓ Error messages
+```
+
+**Privacy:** Only tool names, durations, and errors are sent. Never inputs, outputs, or user data.
+
+[→ Telemetry Guide](./docs/telemetry.md)
+
+## Tree-Shakeable Imports
+
+Import only what you need:
+
+```typescript
+// Full SDK
+import { z, validate, wrapTool, createLogger } from '@openconductor/mcp-sdk'
+
+// Or specific modules (smaller bundles)
+import { ValidationError } from '@openconductor/mcp-sdk/errors'
+import { z, validate } from '@openconductor/mcp-sdk/validate'
+import { createLogger } from '@openconductor/mcp-sdk/logger'
+import { wrapTool } from '@openconductor/mcp-sdk/server'
+import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
+```
+
+## Documentation
+
+- **[Getting Started](./docs/getting-started.md)** — Build your first server
+- **[Error Handling](./docs/errors.md)** — All error types and usage
+- **[Validation](./docs/validation.md)** — Schema patterns and helpers
+- **[Telemetry](./docs/telemetry.md)** — Observability setup
+- **[API Reference](./docs/api-reference.md)** — Complete API docs
+
+## Examples
+
+### Full MCP Server
+
+See [examples/full-server](./examples/full-server) for a complete implementation.
+
+### FastMCP Integration
+
+```typescript
+import FastMCP from 'fastmcp'
+import { wrapTool, validateInput, z } from '@openconductor/mcp-sdk'
+
+const server = new FastMCP({ name: 'my-server' })
+
+server.addTool({
+  name: 'greet',
+  description: 'Generate a greeting',
+  parameters: z.object({ name: z.string() }),
+  execute: wrapTool(
+    validateInput(z.object({ name: z.string() }), async ({ name }) => {
+      return `Hello, ${name}!`
+    }),
+    { name: 'greet', timeout: 5000 }
+  )
+})
+```
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+MIT © [OpenConductor](https://openconductor.dev)
