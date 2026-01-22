@@ -1,6 +1,6 @@
 {
   "name": "@openconductor/mcp-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "The standard SDK for building MCP servers — error handling, validation, logging, and telemetry out of the box",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -64,11 +64,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openconductor/mcp-sdk.git"
+    "url": "git+https://github.com/epicmotionSD/mcp-sdk.git"
   },
-  "homepage": "https://openconductor.dev",
+  "homepage": "https://github.com/epicmotionSD/mcp-sdk#readme",
   "bugs": {
-    "url": "https://github.com/openconductor/mcp-sdk/issues"
+    "url": "https://github.com/epicmotionSD/mcp-sdk/issues"
   },
   "dependencies": {
     "zod": "^3.23.8"
