@@ -18,7 +18,10 @@ var ErrorCodes = {
   TIMEOUT_ERROR: -32007,
   VALIDATION_ERROR: -32008,
   DEPENDENCY_ERROR: -32009,
-  CONFIGURATION_ERROR: -32010
+  CONFIGURATION_ERROR: -32010,
+  PAYMENT_REQUIRED: -32011,
+  INSUFFICIENT_CREDITS: -32012,
+  SUBSCRIPTION_REQUIRED: -32013
 };
 
 // src/errors/index.ts
@@ -142,15 +145,49 @@ var ConfigurationError = class extends MCPError {
     this.name = "ConfigurationError";
   }
 };
+var PaymentRequiredError = class extends MCPError {
+  constructor(toolName, options) {
+    super(ErrorCodes.PAYMENT_REQUIRED, `Payment required to use '${toolName}'`, {
+      tool: toolName,
+      ...options?.upgradeUrl && { upgradeUrl: options.upgradeUrl },
+      ...options?.priceId && { priceId: options.priceId }
+    });
+    this.name = "PaymentRequiredError";
+  }
+};
+var InsufficientCreditsError = class extends MCPError {
+  constructor(required, available, options) {
+    super(ErrorCodes.INSUFFICIENT_CREDITS, `Insufficient credits: need ${required}, have ${available}`, {
+      required,
+      available,
+      ...options?.purchaseUrl && { purchaseUrl: options.purchaseUrl }
+    });
+    this.name = "InsufficientCreditsError";
+  }
+};
+var SubscriptionRequiredError = class extends MCPError {
+  constructor(requiredTier, currentTier, options) {
+    const msg = currentTier ? `Subscription '${requiredTier}' required (current: '${currentTier}')` : `Subscription '${requiredTier}' required`;
+    super(ErrorCodes.SUBSCRIPTION_REQUIRED, msg, {
+      requiredTier,
+      ...currentTier && { currentTier },
+      ...options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }
+    });
+    this.name = "SubscriptionRequiredError";
+  }
+};
 
 exports.AuthenticationError = AuthenticationError;
 exports.AuthorizationError = AuthorizationError;
 exports.ConfigurationError = ConfigurationError;
 exports.DependencyError = DependencyError;
 exports.ErrorCodes = ErrorCodes;
+exports.InsufficientCreditsError = InsufficientCreditsError;
 exports.MCPError = MCPError;
+exports.PaymentRequiredError = PaymentRequiredError;
 exports.RateLimitError = RateLimitError;
 exports.ResourceNotFoundError = ResourceNotFoundError;
+exports.SubscriptionRequiredError = SubscriptionRequiredError;
 exports.TimeoutError = TimeoutError;
 exports.ToolExecutionError = ToolExecutionError;
 exports.ToolNotFoundError = ToolNotFoundError;

@@ -18,6 +18,9 @@ export {
   TimeoutError,
   DependencyError,
   ConfigurationError,
+  PaymentRequiredError,
+  InsufficientCreditsError,
+  SubscriptionRequiredError,
   ErrorCodes,
   type ErrorCode,
 } from './errors'
@@ -62,3 +65,21 @@ export {
   type ToolMetric,
   type TelemetryBatch,
 } from './telemetry'
+
+// Payment / Monetization
+export {
+  initPayment,
+  getPaymentConfig,
+  requirePayment,
+  createPaidTool,
+  canUserAccess,
+  getUserBillingStatus,
+  type PaymentConfig,
+  type PaymentRequirement,
+  type CreditRequirement,
+  type SubscriptionRequirement,
+  type StripeRequirement,
+  type UserContext,
+  type BillingStatus,
+  type RequirePaymentOptions,
+} from './payment'

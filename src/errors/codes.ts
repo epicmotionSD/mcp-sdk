@@ -21,6 +21,9 @@ export const ErrorCodes = {
   VALIDATION_ERROR: -32008,
   DEPENDENCY_ERROR: -32009,
   CONFIGURATION_ERROR: -32010,
+  PAYMENT_REQUIRED: -32011,
+  INSUFFICIENT_CREDITS: -32012,
+  SUBSCRIPTION_REQUIRED: -32013,
 } as const
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes]

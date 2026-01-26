@@ -177,3 +177,48 @@ export class ConfigurationError extends MCPError {
     this.name = 'ConfigurationError'
   }
 }
+
+/**
+ * Thrown when payment is required to access a tool
+ */
+export class PaymentRequiredError extends MCPError {
+  constructor(toolName: string, options?: { upgradeUrl?: string; priceId?: string }) {
+    super(ErrorCodes.PAYMENT_REQUIRED, `Payment required to use '${toolName}'`, {
+      tool: toolName,
+      ...(options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }),
+      ...(options?.priceId && { priceId: options.priceId }),
+    })
+    this.name = 'PaymentRequiredError'
+  }
+}
+
+/**
+ * Thrown when user doesn't have enough credits
+ */
+export class InsufficientCreditsError extends MCPError {
+  constructor(required: number, available: number, options?: { purchaseUrl?: string }) {
+    super(ErrorCodes.INSUFFICIENT_CREDITS, `Insufficient credits: need ${required}, have ${available}`, {
+      required,
+      available,
+      ...(options?.purchaseUrl && { purchaseUrl: options.purchaseUrl }),
+    })
+    this.name = 'InsufficientCreditsError'
+  }
+}
+
+/**
+ * Thrown when a subscription tier is required
+ */
+export class SubscriptionRequiredError extends MCPError {
+  constructor(requiredTier: string, currentTier?: string, options?: { upgradeUrl?: string }) {
+    const msg = currentTier 
+      ? `Subscription '${requiredTier}' required (current: '${currentTier}')`
+      : `Subscription '${requiredTier}' required`
+    super(ErrorCodes.SUBSCRIPTION_REQUIRED, msg, {
+      requiredTier,
+      ...(currentTier && { currentTier }),
+      ...(options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }),
+    })
+    this.name = 'SubscriptionRequiredError'
+  }
+}

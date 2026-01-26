@@ -8,6 +8,7 @@ export default defineConfig({
     'logger/index': 'src/logger/index.ts',
     'server/index': 'src/server/index.ts',
     'telemetry/index': 'src/telemetry/index.ts',
+    'payment/index': 'src/payment/index.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

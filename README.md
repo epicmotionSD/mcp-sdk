@@ -2,7 +2,7 @@
 
 **The standard SDK for building production-ready MCP servers.**
 
-Stop copy-pasting boilerplate. Get error handling, validation, logging, and telemetry out of the box.
+Stop copy-pasting boilerplate. Get error handling, validation, logging, telemetry, and **one-line monetization** out of the box.
 
 [![npm version](https://badge.fury.io/js/%40openconductor%2Fmcp-sdk.svg)](https://www.npmjs.com/package/@openconductor/mcp-sdk)
 [![Downloads](https://img.shields.io/npm/dw/@openconductor/mcp-sdk)](https://www.npmjs.com/package/@openconductor/mcp-sdk)
@@ -19,9 +19,10 @@ Every MCP server needs the same things:
 | **Input Validation** | Manual checks, type-unsafe | Zod schemas, fully typed |
 | **Logging** | console.log chaos | Structured JSON, log-aggregator ready |
 | **Telemetry** | Flying blind | One-line setup, real dashboards |
+| **Monetization** | Build your own billing | One-line `requirePayment()` |
 | **Timeouts** | None (hung requests) | Automatic with configurable limits |
 
-All in **~15kb**, zero config required.
+All in **~20kb**, zero config required.
 
 ## Install
 
@@ -169,13 +170,37 @@ initTelemetry({
 
 [→ Telemetry Guide](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/telemetry.md)
 
+### 💰 One-Line Monetization
+
+Charge for your MCP tools with credits, subscriptions, or per-call:
+
+```typescript
+import { initPayment, requirePayment } from '@openconductor/mcp-sdk/payment'
+
+initPayment({ apiKey: 'oc_xxx' })
+
+// Credits-based
+const paidTool = requirePayment({ credits: 10 })(myHandler)
+
+// Subscription tier
+const premiumTool = requirePayment({ tier: 'pro' })(myHandler)
+
+// Works with wrapTool
+const safePaidTool = wrapTool(
+  requirePayment({ credits: 5 })(myHandler),
+  { name: 'premium-analysis' }
+)
+```
+
+[→ Monetization Guide](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/payment.md)
+
 ## Tree-Shakeable Imports
 
 Import only what you need:
 
 ```typescript
 // Full SDK
-import { z, validate, wrapTool, createLogger } from '@openconductor/mcp-sdk'
+import { z, validate, wrapTool, createLogger, requirePayment } from '@openconductor/mcp-sdk'
 
 // Or specific modules (smaller bundles)
 import { ValidationError } from '@openconductor/mcp-sdk/errors'
@@ -183,6 +208,7 @@ import { z, validate } from '@openconductor/mcp-sdk/validate'
 import { createLogger } from '@openconductor/mcp-sdk/logger'
 import { wrapTool } from '@openconductor/mcp-sdk/server'
 import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
+import { requirePayment } from '@openconductor/mcp-sdk/payment'
 ```
 
 ## Documentation
@@ -191,6 +217,7 @@ import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
 - **[Error Handling](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/errors.md)** — All error types and usage
 - **[Validation](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/validation.md)** — Schema patterns and helpers
 - **[Telemetry](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/telemetry.md)** — Observability setup
+- **[Monetization](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/payment.md)** — One-line payment gates
 - **[API Reference](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/api-reference.md)** — Complete API docs
 
 ## Examples

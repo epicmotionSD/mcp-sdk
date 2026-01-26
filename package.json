@@ -1,6 +1,6 @@
 {
   "name": "@openconductor/mcp-sdk",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "The standard SDK for building MCP servers — error handling, validation, logging, and telemetry out of the box",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -35,6 +35,11 @@
       "types": "./dist/telemetry/index.d.ts",
       "import": "./dist/telemetry/index.mjs",
       "require": "./dist/telemetry/index.js"
+    },
+    "./payment": {
+      "types": "./dist/payment/index.d.ts",
+      "import": "./dist/payment/index.mjs",
+      "require": "./dist/payment/index.js"
     }
   },
   "files": [
@@ -58,7 +63,10 @@
     "sdk",
     "openconductor",
     "validation",
-    "telemetry"
+    "telemetry",
+    "monetization",
+    "payment",
+    "billing"
   ],
   "author": "OpenConductor <hello@openconductor.ai>",
   "license": "MIT",

@@ -18,6 +18,9 @@ declare const ErrorCodes: {
     readonly VALIDATION_ERROR: -32008;
     readonly DEPENDENCY_ERROR: -32009;
     readonly CONFIGURATION_ERROR: -32010;
+    readonly PAYMENT_REQUIRED: -32011;
+    readonly INSUFFICIENT_CREDITS: -32012;
+    readonly SUBSCRIPTION_REQUIRED: -32013;
 };
 type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
@@ -110,5 +113,30 @@ declare class DependencyError extends MCPError {
 declare class ConfigurationError extends MCPError {
     constructor(setting: string, reason: string);
 }
+/**
+ * Thrown when payment is required to access a tool
+ */
+declare class PaymentRequiredError extends MCPError {
+    constructor(toolName: string, options?: {
+        upgradeUrl?: string;
+        priceId?: string;
+    });
+}
+/**
+ * Thrown when user doesn't have enough credits
+ */
+declare class InsufficientCreditsError extends MCPError {
+    constructor(required: number, available: number, options?: {
+        purchaseUrl?: string;
+    });
+}
+/**
+ * Thrown when a subscription tier is required
+ */
+declare class SubscriptionRequiredError extends MCPError {
+    constructor(requiredTier: string, currentTier?: string, options?: {
+        upgradeUrl?: string;
+    });
+}
 
-export { AuthenticationError, AuthorizationError, ConfigurationError, DependencyError, type ErrorCode, ErrorCodes, MCPError, RateLimitError, ResourceNotFoundError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };
+export { AuthenticationError, AuthorizationError, ConfigurationError, DependencyError, type ErrorCode, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };
