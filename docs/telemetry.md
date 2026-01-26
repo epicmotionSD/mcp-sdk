@@ -165,7 +165,7 @@ const tool = wrapTool(handler, {
 
 ## Getting an API Key
 
-1. Go to [openconductor.dev](https://openconductor.dev)
+1. Go to [openconductor.ai](https://openconductor.ai)
 2. Sign up for free tier (10k events/month)
 3. Create a project and copy your API key
 4. Add to environment: `OPENCONDUCTOR_API_KEY=oc_live_xxx`

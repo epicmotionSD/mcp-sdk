@@ -44,7 +44,7 @@ import {
 
 // Optional: Enable observability
 initTelemetry({
-  apiKey: 'oc_xxx',  // Get free key at openconductor.dev
+  apiKey: 'oc_xxx',  // Get free key at openconductor.ai
   serverName: 'my-server',
   serverVersion: '1.0.0'
 })
@@ -83,7 +83,7 @@ throw new ValidationError('amount', 'Must be positive', -5)
 
 **10 error types included:** ValidationError, ToolNotFoundError, ToolExecutionError, ResourceNotFoundError, AuthenticationError, AuthorizationError, RateLimitError, TimeoutError, DependencyError, ConfigurationError
 
-[→ Error Handling Guide](./docs/errors.md)
+[→ Error Handling Guide](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/errors.md)
 
 ### ✅ Validation
 
@@ -103,7 +103,7 @@ const handler = validateInput(
 )
 ```
 
-[→ Validation Guide](./docs/validation.md)
+[→ Validation Guide](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/validation.md)
 
 ### 📝 Logging
 
@@ -153,7 +153,7 @@ Optional observability for production:
 import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
 
 initTelemetry({
-  apiKey: 'oc_xxx',           // Free tier at openconductor.dev
+  apiKey: 'oc_xxx',           // Free tier at openconductor.ai
   serverName: 'my-server',
   serverVersion: '1.0.0',
 })
@@ -167,7 +167,7 @@ initTelemetry({
 
 **Privacy:** Only tool names, durations, and errors are sent. Never inputs, outputs, or user data.
 
-[→ Telemetry Guide](./docs/telemetry.md)
+[→ Telemetry Guide](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/telemetry.md)
 
 ## Tree-Shakeable Imports
 
@@ -187,17 +187,17 @@ import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
 
 ## Documentation
 
-- **[Getting Started](./docs/getting-started.md)** — Build your first server
-- **[Error Handling](./docs/errors.md)** — All error types and usage
-- **[Validation](./docs/validation.md)** — Schema patterns and helpers
-- **[Telemetry](./docs/telemetry.md)** — Observability setup
-- **[API Reference](./docs/api-reference.md)** — Complete API docs
+- **[Getting Started](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/getting-started.md)** — Build your first server
+- **[Error Handling](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/errors.md)** — All error types and usage
+- **[Validation](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/validation.md)** — Schema patterns and helpers
+- **[Telemetry](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/telemetry.md)** — Observability setup
+- **[API Reference](https://github.com/epicmotionSD/mcp-sdk/blob/main/docs/api-reference.md)** — Complete API docs
 
 ## Examples
 
 ### Full MCP Server
 
-See [examples/full-server](./examples/full-server) for a complete implementation.
+See [examples/full-server](https://github.com/epicmotionSD/mcp-sdk/tree/main/examples/full-server) for a complete implementation.
 
 ### FastMCP Integration
 
@@ -222,8 +222,8 @@ server.addTool({
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Contributions welcome! See [CONTRIBUTING.md](https://github.com/epicmotionSD/mcp-sdk/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT © [OpenConductor](https://openconductor.dev)
+MIT © [OpenConductor](https://openconductor.ai)
