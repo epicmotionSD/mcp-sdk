@@ -545,7 +545,7 @@ async function checkBilling(params) {
     return { allowed: true, credits: 9999, tier: "test" };
   }
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/check`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-check`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -581,7 +581,7 @@ async function deductCredits(params) {
   if (!config) return false;
   if (config.testMode) return true;
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/deduct`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-deduct`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -672,7 +672,7 @@ async function getUserBillingStatus(userId) {
     return { credits: 9999, tier: "test", active: true };
   }
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/status/${userId}`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-status/${userId}`, {
       headers: {
         "Authorization": `Bearer ${config.apiKey}`
       }

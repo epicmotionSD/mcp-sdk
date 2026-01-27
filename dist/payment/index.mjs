@@ -102,7 +102,7 @@ async function checkBilling(params) {
     return { allowed: true, credits: 9999, tier: "test" };
   }
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/check`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-check`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -138,7 +138,7 @@ async function deductCredits(params) {
   if (!config) return false;
   if (config.testMode) return true;
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/deduct`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-deduct`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -229,7 +229,7 @@ async function getUserBillingStatus(userId) {
     return { credits: 9999, tier: "test", active: true };
   }
   try {
-    const response = await fetch(`${config.apiUrl}/v1/billing/status/${userId}`, {
+    const response = await fetch(`${config.apiUrl}/functions/v1/billing-status/${userId}`, {
       headers: {
         "Authorization": `Bearer ${config.apiKey}`
       }
@@ -240,7 +240,202 @@ async function getUserBillingStatus(userId) {
     return null;
   }
 }
+async function getCreditPacks() {
+  const config = paymentConfig;
+  if (!config) return null;
+  try {
+    const response = await fetch(`${config.apiUrl}/functions/v1/credit-packs`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.packs;
+  } catch {
+    return null;
+  }
+}
+async function createCreditsCheckout(pack, options = {}) {
+  const config = paymentConfig;
+  if (!config) {
+    console.error("[payment] Payment not initialized. Call initPayment() first.");
+    return null;
+  }
+  try {
+    const response = await fetch(`${config.apiUrl}/functions/v1/stripe-checkout-credits`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        pack,
+        successUrl: options.successUrl,
+        cancelUrl: options.cancelUrl
+      })
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("[payment] Checkout creation failed:", error);
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[payment] Checkout error:", error);
+    return null;
+  }
+}
+async function getCheckoutUrl(pack) {
+  const session = await createCreditsCheckout(pack);
+  return session?.url ?? null;
+}
+async function generateUpgradePrompt(options = {}) {
+  const { required = 0, available = 0, toolName, includeLinks = true } = options;
+  const needed = Math.max(0, required - available);
+  let recommendedPack = "starter";
+  if (needed > 100) recommendedPack = "pro";
+  if (needed > 500) recommendedPack = "business";
+  const packUrls = {
+    starter: null,
+    pro: null,
+    business: null
+  };
+  if (includeLinks) {
+    const [starterUrl, proUrl, businessUrl] = await Promise.all([
+      getCheckoutUrl("starter"),
+      getCheckoutUrl("pro"),
+      getCheckoutUrl("business")
+    ]);
+    packUrls.starter = starterUrl;
+    packUrls.pro = proUrl;
+    packUrls.business = businessUrl;
+  }
+  const toolPart = toolName ? ` to use ${toolName}` : "";
+  const shortMessage = `Insufficient credits: need ${required}, have ${available}`;
+  let message = `You need ${needed} more credits${toolPart}.
 
-export { canUserAccess, createPaidTool, getPaymentConfig, getUserBillingStatus, initPayment, requirePayment };
+`;
+  message += `\u{1F4B3} Quick top-up options:
+`;
+  message += `  \u2022 Starter: 100 credits for $9.99${packUrls.starter ? ` \u2192 ${packUrls.starter}` : ""}
+`;
+  message += `  \u2022 Pro: 500 credits for $39.99 (20% off)${packUrls.pro ? ` \u2192 ${packUrls.pro}` : ""}
+`;
+  message += `  \u2022 Business: 2,000 credits for $119.99 (40% off)${packUrls.business ? ` \u2192 ${packUrls.business}` : ""}
+`;
+  if (recommendedPack !== "starter") {
+    message += `
+\u2728 Recommended: ${recommendedPack.charAt(0).toUpperCase() + recommendedPack.slice(1)} Pack`;
+  }
+  return {
+    message,
+    shortMessage,
+    recommendedPack,
+    packs: {
+      starter: { credits: 100, price: 9.99, url: packUrls.starter },
+      pro: { credits: 500, price: 39.99, url: packUrls.pro },
+      business: { credits: 2e3, price: 119.99, url: packUrls.business }
+    }
+  };
+}
+function getDashboardCheckoutUrl(options = {}) {
+  const params = new URLSearchParams();
+  params.set("action", "buy-credits");
+  if (options.required) params.set("required", String(options.required));
+  if (options.available) params.set("available", String(options.available));
+  if (options.pack) params.set("pack", options.pack);
+  return `https://dashboard.openconductor.ai?${params.toString()}`;
+}
+function createUpgradeErrorHandler(handlers) {
+  return async (error) => {
+    if (error instanceof InsufficientCreditsError && handlers.onInsufficientCredits) {
+      const prompt = await generateUpgradePrompt({
+        required: error.data?.required,
+        available: error.data?.available
+      });
+      return handlers.onInsufficientCredits(prompt);
+    }
+    if (error instanceof SubscriptionRequiredError && handlers.onSubscriptionRequired) {
+      return handlers.onSubscriptionRequired(error);
+    }
+    if (error instanceof PaymentRequiredError && handlers.onPaymentRequired) {
+      return handlers.onPaymentRequired(error);
+    }
+    if (handlers.onOtherError) {
+      return handlers.onOtherError(error);
+    }
+    throw error;
+  };
+}
+async function getUserAnalytics(userId, period = "30d") {
+  const config = paymentConfig;
+  if (!config) {
+    console.error("[payment] Payment not initialized. Call initPayment() first.");
+    return null;
+  }
+  if (config.testMode) {
+    return {
+      period,
+      balance: 9999,
+      summary: {
+        totalUsed: 100,
+        totalPurchased: 500,
+        netChange: 400,
+        burnRate: 3.33,
+        daysRemaining: 3e3,
+        toolCount: 5,
+        transactionCount: 30
+      },
+      topTools: [
+        { tool: "test-tool", calls: 10, credits: 50 }
+      ],
+      usageTimeline: [],
+      recentTransactions: []
+    };
+  }
+  try {
+    const response = await fetch(
+      `${config.apiUrl}/functions/v1/usage-analytics/${userId}?period=${period}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${config.apiKey}`
+        }
+      }
+    );
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.error("[payment] Analytics fetch error:", error);
+    return null;
+  }
+}
+async function checkLowBalance(userId, thresholdDays = 7) {
+  const analytics = await getUserAnalytics(userId, "7d");
+  if (!analytics) return null;
+  const { balance, summary } = analytics;
+  const { burnRate, daysRemaining } = summary;
+  const isLow = daysRemaining !== null && daysRemaining <= thresholdDays;
+  let recommendedPack = "starter";
+  const weeklyBurn = burnRate * 7;
+  if (weeklyBurn > 100) recommendedPack = "pro";
+  if (weeklyBurn > 400) recommendedPack = "business";
+  let message = "";
+  if (isLow) {
+    if (daysRemaining === 0) {
+      message = `\u26A0\uFE0F Credits depleted! Balance: ${balance}. Buy more to continue.`;
+    } else if (daysRemaining <= 1) {
+      message = `\u26A0\uFE0F Running low! ~${daysRemaining} day of credits left at current usage.`;
+    } else {
+      message = `\u{1F4CA} ~${daysRemaining} days of credits remaining at current burn rate (${burnRate.toFixed(1)}/day).`;
+    }
+  }
+  return {
+    isLow,
+    daysRemaining,
+    balance,
+    burnRate,
+    message,
+    recommendedPack
+  };
+}
+
+export { canUserAccess, checkLowBalance, createCreditsCheckout, createPaidTool, createUpgradeErrorHandler, generateUpgradePrompt, getCheckoutUrl, getCreditPacks, getDashboardCheckoutUrl, getPaymentConfig, getUserAnalytics, getUserBillingStatus, initPayment, requirePayment };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map
