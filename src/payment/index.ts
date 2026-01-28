@@ -4,6 +4,14 @@ import {
   SubscriptionRequiredError,
   ConfigurationError,
 } from '../errors'
+import { getConfig, isDemoMode } from '../config'
+import {
+  MOCK_BILLING_STATUS,
+  MOCK_USER_BILLING,
+  MOCK_CREDIT_PACKS,
+  getMockAnalytics,
+  demoLogger,
+} from '../demo'
 
 // ============================================================================
 // Types
@@ -71,6 +79,8 @@ let paymentConfig: PaymentConfig | null = null
 /**
  * Initialize payment/billing configuration
  * 
+ * In demo mode, this is optional - mock billing will be used automatically.
+ * 
  * @example
  * ```typescript
  * initPayment({
@@ -79,7 +89,23 @@ let paymentConfig: PaymentConfig | null = null
  * })
  * ```
  */
-export function initPayment(config: PaymentConfig): void {
+export function initPayment(config?: PaymentConfig): void {
+  // In demo mode, auto-configure with mocks
+  if (isDemoMode()) {
+    paymentConfig = {
+      apiKey: 'demo_key',
+      apiUrl: 'https://api.openconductor.ai',
+      testMode: true,
+      upgradeUrl: 'https://openconductor.ai/pricing',
+    }
+    return
+  }
+  
+  // Production mode - require config
+  if (!config?.apiKey) {
+    throw new ConfigurationError('payment', 'Payment requires apiKey in production mode. Set OPENCONDUCTOR_API_KEY or pass apiKey to initPayment().')
+  }
+  
   paymentConfig = {
     apiUrl: 'https://api.openconductor.ai',
     testMode: false,
@@ -112,6 +138,12 @@ interface DeductCreditsParams {
 }
 
 async function checkBilling(params: CheckBillingParams): Promise<BillingStatus> {
+  // Demo mode - return mock data
+  if (isDemoMode()) {
+    demoLogger.billing(params.userId, MOCK_BILLING_STATUS)
+    return MOCK_BILLING_STATUS
+  }
+
   const config = paymentConfig
   if (!config) {
     throw new ConfigurationError('payment', 'Payment not initialized. Call initPayment() first.')
@@ -160,6 +192,12 @@ async function checkBilling(params: CheckBillingParams): Promise<BillingStatus> 
 }
 
 async function deductCredits(params: DeductCreditsParams): Promise<boolean> {
+  // Demo mode - log but don't deduct
+  if (isDemoMode()) {
+    demoLogger.deduct(params.userId, params.credits, params.toolName)
+    return true
+  }
+
   const config = paymentConfig
   if (!config) return false
 
@@ -366,6 +404,11 @@ export async function getUserBillingStatus(userId: string): Promise<{
   tier: string
   active: boolean
 } | null> {
+  // Demo mode - return mock data
+  if (isDemoMode()) {
+    return MOCK_USER_BILLING
+  }
+
   const config = paymentConfig
   if (!config) return null
 
@@ -422,6 +465,11 @@ export interface CheckoutSession {
  * ```
  */
 export async function getCreditPacks(): Promise<Record<CreditPack, CreditPackInfo> | null> {
+  // Demo mode - return mock packs
+  if (isDemoMode()) {
+    return MOCK_CREDIT_PACKS
+  }
+
   const config = paymentConfig
   if (!config) return null
 
@@ -721,6 +769,11 @@ export async function getUserAnalytics(
   userId: string,
   period: AnalyticsPeriod = '30d'
 ): Promise<UsageAnalytics | null> {
+  // Demo mode - return realistic mock data
+  if (isDemoMode()) {
+    return getMockAnalytics(period)
+  }
+
   const config = paymentConfig
   if (!config) {
     console.error('[payment] Payment not initialized. Call initPayment() first.')

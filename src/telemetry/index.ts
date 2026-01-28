@@ -1,3 +1,6 @@
+import { getConfig, isDemoMode } from '../config'
+import { demoLogger } from '../demo'
+
 export interface TelemetryConfig {
   /** Your OpenConductor API key */
   apiKey: string
@@ -37,13 +40,31 @@ export interface TelemetryBatch {
 const SDK_VERSION = '1.0.0'
 const DEFAULT_ENDPOINT = 'https://api.openconductor.ai/functions/v1/telemetry'
 
-let globalTelemetry: Telemetry | null = null
+let globalTelemetry: Telemetry | DemoTelemetry | null = null
 
 /**
  * Initialize telemetry for your MCP server
- * Call this once at startup with your OpenConductor API key
+ * 
+ * In demo mode, this is optional - telemetry will log to console instead of API.
+ * Call this once at startup with your OpenConductor API key for production.
  */
-export function initTelemetry(config: TelemetryConfig): Telemetry {
+export function initTelemetry(config?: TelemetryConfig): Telemetry | DemoTelemetry {
+  const sdkConfig = getConfig()
+  
+  // In demo mode, create a demo telemetry instance
+  if (isDemoMode()) {
+    globalTelemetry = new DemoTelemetry(
+      config?.serverName ?? sdkConfig.serverName,
+      config?.serverVersion ?? sdkConfig.serverVersion
+    )
+    return globalTelemetry
+  }
+  
+  // Production mode - require config
+  if (!config?.apiKey) {
+    throw new Error('Telemetry requires apiKey in production mode. Set OPENCONDUCTOR_API_KEY or pass apiKey to initTelemetry().')
+  }
+  
   globalTelemetry = new Telemetry(config)
   return globalTelemetry
 }
@@ -51,14 +72,14 @@ export function initTelemetry(config: TelemetryConfig): Telemetry {
 /**
  * Get the global telemetry instance (if initialized)
  */
-export function getTelemetry(): Telemetry | null {
+export function getTelemetry(): Telemetry | DemoTelemetry | null {
   return globalTelemetry
 }
 
 
 export class Telemetry {
   private config: Required<Omit<TelemetryConfig, 'serverVersion'>> & Pick<TelemetryConfig, 'serverVersion'>
-  private buffer: ToolMetric[] = []
+  protected buffer: ToolMetric[] = []
   private flushTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(config: TelemetryConfig) {
@@ -174,7 +195,7 @@ export class Telemetry {
     this.log('Telemetry shutdown')
   }
 
-  private log(message: string, data?: Record<string, unknown>): void {
+  protected log(message: string, data?: Record<string, unknown>): void {
     if (this.config.debug) {
       console.debug(JSON.stringify({
         timestamp: new Date().toISOString(),
@@ -190,5 +211,88 @@ export class Telemetry {
     if (this.config.debug) {
       console.error('[OpenConductor Telemetry Error]', error)
     }
+  }
+}
+
+
+// ============================================================================
+// Demo Telemetry
+// ============================================================================
+
+const DEMO_PREFIX = '[🎮 DEMO]'
+
+/**
+ * Demo telemetry that logs to console instead of sending to API
+ * Automatically used in demo mode
+ */
+export class DemoTelemetry {
+  private serverName: string
+  private serverVersion: string
+  private buffer: ToolMetric[] = []
+
+  constructor(serverName: string, serverVersion?: string) {
+    this.serverName = serverName
+    this.serverVersion = serverVersion ?? '0.0.0'
+    console.log(`${DEMO_PREFIX} Telemetry initialized (console mode) for ${serverName}`)
+  }
+
+  /**
+   * Track a tool invocation - logs to console in demo mode
+   */
+  trackToolCall(
+    tool: string,
+    duration: number,
+    success: boolean,
+    error?: string
+  ): void {
+    const metric: ToolMetric = {
+      tool,
+      duration,
+      success,
+      ...(error && { error }),
+      timestamp: new Date().toISOString(),
+    }
+
+    this.buffer.push(metric)
+
+    // Log to console in demo mode
+    demoLogger.telemetry('track', {
+      tool,
+      duration: `${duration}ms`,
+      success,
+      ...(error && { error }),
+    })
+  }
+
+  /**
+   * Flush - in demo mode, just logs a summary
+   */
+  async flush(): Promise<void> {
+    if (this.buffer.length === 0) return
+
+    const count = this.buffer.length
+
+    // Log summary instead of sending
+    demoLogger.telemetry('flush', {
+      message: `Would send ${count} metrics to OpenConductor`,
+      metrics: this.buffer.slice(0, 3),
+      ...(count > 3 && { more: `...and ${count - 3} more` }),
+    })
+
+    this.buffer = []
+  }
+
+  /**
+   * Shutdown - no-op in demo mode
+   */
+  shutdown(): void {
+    console.log(`${DEMO_PREFIX} Telemetry shutdown`)
+  }
+
+  /**
+   * Get buffered metrics (useful for testing/inspection)
+   */
+  getBuffer(): ToolMetric[] {
+    return [...this.buffer]
   }
 }

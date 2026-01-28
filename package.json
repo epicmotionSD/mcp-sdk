@@ -1,7 +1,7 @@
 {
   "name": "@openconductor/mcp-sdk",
-  "version": "1.3.2",
-  "description": "The standard SDK for building MCP servers — error handling, validation, logging, and telemetry out of the box",
+  "version": "1.4.0",
+  "description": "The standard SDK for building MCP servers — error handling, validation, logging, telemetry, and one-line monetization out of the box",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -10,6 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.ts",
+      "import": "./dist/config/index.mjs",
+      "require": "./dist/config/index.js"
+    },
+    "./demo": {
+      "types": "./dist/demo/index.d.ts",
+      "import": "./dist/demo/index.mjs",
+      "require": "./dist/demo/index.js"
     },
     "./errors": {
       "types": "./dist/errors/index.d.ts",

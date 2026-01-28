@@ -1,6 +1,194 @@
 import { z } from 'zod';
 export { ZodError, z } from 'zod';
 
+// src/config/index.ts
+var globalConfig = {
+  apiKey: null,
+  demoMode: false,
+  serverName: "mcp-server",
+  serverVersion: "0.0.0",
+  initialized: false
+};
+var DEMO_BANNER = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+\u2502                                                                 \u2502
+\u2502   \u{1F3AE}  DEMO MODE ACTIVE                                          \u2502
+\u2502                                                                 \u2502
+\u2502   The SDK is running without an API key.                        \u2502
+\u2502   \u2022 Payment: Mock billing (always allowed, 9999 credits)        \u2502
+\u2502   \u2022 Telemetry: Logging to console only                          \u2502
+\u2502   \u2022 All features work - no data sent to OpenConductor           \u2502
+\u2502                                                                 \u2502
+\u2502   To enable production mode:                                    \u2502
+\u2502   1. Get a free API key at https://openconductor.ai             \u2502
+\u2502   2. Set OPENCONDUCTOR_API_KEY environment variable             \u2502
+\u2502      or pass apiKey to initOpenConductor()                      \u2502
+\u2502                                                                 \u2502
+\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+`;
+var PRODUCTION_BANNER = `
+\u250C\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+\u2502   \u2705  OpenConductor SDK initialized (production mode)           \u2502
+\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
+`;
+function initOpenConductor(config = {}) {
+  const apiKey = config.apiKey ?? process.env.OPENCONDUCTOR_API_KEY ?? null;
+  const demoMode = config.demoMode === true || !apiKey;
+  globalConfig = {
+    apiKey: demoMode ? null : apiKey,
+    demoMode,
+    serverName: config.serverName ?? process.env.OPENCONDUCTOR_SERVER_NAME ?? "mcp-server",
+    serverVersion: config.serverVersion ?? process.env.npm_package_version ?? "0.0.0",
+    initialized: true
+  };
+  if (!config.quiet) {
+    if (demoMode) {
+      console.log(DEMO_BANNER);
+    } else {
+      console.log(PRODUCTION_BANNER);
+    }
+  }
+  return globalConfig;
+}
+function getConfig() {
+  if (!globalConfig.initialized) {
+    return initOpenConductor({ quiet: true });
+  }
+  return globalConfig;
+}
+function isDemoMode() {
+  return getConfig().demoMode;
+}
+function isInitialized() {
+  return globalConfig.initialized;
+}
+function resetConfig() {
+  globalConfig = {
+    apiKey: null,
+    demoMode: false,
+    serverName: "mcp-server",
+    serverVersion: "0.0.0",
+    initialized: false
+  };
+}
+
+// src/demo/index.ts
+var MOCK_BILLING_STATUS = {
+  allowed: true,
+  credits: 9999,
+  tier: "demo",
+  reason: void 0,
+  actionUrl: "https://openconductor.ai/pricing"
+};
+var MOCK_USER_BILLING = {
+  credits: 9999,
+  tier: "demo",
+  active: true
+};
+var MOCK_CREDIT_PACKS = {
+  starter: {
+    name: "Starter Pack",
+    credits: 100,
+    price: 9.99,
+    perCredit: 0.0999,
+    savings: 0,
+    bestFor: "Testing and small projects"
+  },
+  pro: {
+    name: "Pro Pack",
+    credits: 500,
+    price: 39.99,
+    perCredit: 0.0799,
+    savings: 20,
+    bestFor: "Growing projects",
+    popular: true
+  },
+  business: {
+    name: "Business Pack",
+    credits: 2e3,
+    price: 119.99,
+    perCredit: 0.0599,
+    savings: 40,
+    bestFor: "Production workloads"
+  }
+};
+function generateMockTimeline(days) {
+  const timeline = [];
+  const now = /* @__PURE__ */ new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    timeline.push({
+      date: date.toISOString().split("T")[0],
+      used: Math.floor(Math.random() * 50) + 10,
+      purchased: i % 7 === 0 ? 500 : 0
+      // Weekly purchases
+    });
+  }
+  return timeline;
+}
+function generateMockTransactions(count) {
+  const tools = ["analyze-data", "generate-report", "search-docs", "summarize", "translate"];
+  const transactions = [];
+  const now = /* @__PURE__ */ new Date();
+  for (let i = 0; i < count; i++) {
+    const isDebit = Math.random() > 0.2;
+    const date = new Date(now);
+    date.setHours(date.getHours() - i * 2);
+    transactions.push({
+      id: `txn_demo_${i}`,
+      amount: isDebit ? -(Math.floor(Math.random() * 20) + 1) : 500,
+      type: isDebit ? "usage" : "purchase",
+      tool: isDebit ? tools[Math.floor(Math.random() * tools.length)] : null,
+      createdAt: date.toISOString()
+    });
+  }
+  return transactions;
+}
+function getMockAnalytics(period) {
+  const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : 90;
+  const timeline = generateMockTimeline(days);
+  const totalUsed = timeline.reduce((sum, d) => sum + d.used, 0);
+  const totalPurchased = timeline.reduce((sum, d) => sum + d.purchased, 0);
+  return {
+    period,
+    balance: 9999,
+    summary: {
+      totalUsed,
+      totalPurchased,
+      netChange: totalPurchased - totalUsed,
+      burnRate: totalUsed / days,
+      daysRemaining: Math.floor(9999 / (totalUsed / days)),
+      toolCount: 5,
+      transactionCount: days * 3
+    },
+    topTools: [
+      { tool: "analyze-data", calls: 156, credits: 780 },
+      { tool: "generate-report", calls: 89, credits: 445 },
+      { tool: "search-docs", calls: 234, credits: 234 },
+      { tool: "summarize", calls: 67, credits: 335 },
+      { tool: "translate", calls: 45, credits: 90 }
+    ],
+    usageTimeline: timeline,
+    recentTransactions: generateMockTransactions(10)
+  };
+}
+var DEMO_PREFIX = "[\u{1F3AE} DEMO]";
+var demoLogger = {
+  telemetry: (action, data) => {
+    console.log(`${DEMO_PREFIX} Telemetry ${action}:`, JSON.stringify(data, null, 2));
+  },
+  payment: (action, data) => {
+    console.log(`${DEMO_PREFIX} Payment ${action}:`, JSON.stringify(data, null, 2));
+  },
+  billing: (userId, result) => {
+    console.log(`${DEMO_PREFIX} Billing check for ${userId}: ALLOWED (demo mode)`);
+  },
+  deduct: (userId, credits, tool) => {
+    console.log(`${DEMO_PREFIX} Would deduct ${credits} credits from ${userId} for ${tool} (skipped in demo)`);
+  }
+};
+
 // src/errors/codes.ts
 var ErrorCodes = {
   // JSON-RPC 2.0 Standard Errors
@@ -309,6 +497,17 @@ var SDK_VERSION = "1.0.0";
 var DEFAULT_ENDPOINT = "https://api.openconductor.ai/functions/v1/telemetry";
 var globalTelemetry = null;
 function initTelemetry(config) {
+  const sdkConfig = getConfig();
+  if (isDemoMode()) {
+    globalTelemetry = new DemoTelemetry(
+      config?.serverName ?? sdkConfig.serverName,
+      config?.serverVersion ?? sdkConfig.serverVersion
+    );
+    return globalTelemetry;
+  }
+  if (!config?.apiKey) {
+    throw new Error("Telemetry requires apiKey in production mode. Set OPENCONDUCTOR_API_KEY or pass apiKey to initTelemetry().");
+  }
   globalTelemetry = new Telemetry(config);
   return globalTelemetry;
 }
@@ -425,6 +624,61 @@ var Telemetry = class {
     }
   }
 };
+var DEMO_PREFIX2 = "[\u{1F3AE} DEMO]";
+var DemoTelemetry = class {
+  serverName;
+  serverVersion;
+  buffer = [];
+  constructor(serverName, serverVersion) {
+    this.serverName = serverName;
+    this.serverVersion = serverVersion ?? "0.0.0";
+    console.log(`${DEMO_PREFIX2} Telemetry initialized (console mode) for ${serverName}`);
+  }
+  /**
+   * Track a tool invocation - logs to console in demo mode
+   */
+  trackToolCall(tool, duration, success, error) {
+    const metric = {
+      tool,
+      duration,
+      success,
+      ...error && { error },
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    this.buffer.push(metric);
+    demoLogger.telemetry("track", {
+      tool,
+      duration: `${duration}ms`,
+      success,
+      ...error && { error }
+    });
+  }
+  /**
+   * Flush - in demo mode, just logs a summary
+   */
+  async flush() {
+    if (this.buffer.length === 0) return;
+    const count = this.buffer.length;
+    demoLogger.telemetry("flush", {
+      message: `Would send ${count} metrics to OpenConductor`,
+      metrics: this.buffer.slice(0, 3),
+      ...count > 3 && { more: `...and ${count - 3} more` }
+    });
+    this.buffer = [];
+  }
+  /**
+   * Shutdown - no-op in demo mode
+   */
+  shutdown() {
+    console.log(`${DEMO_PREFIX2} Telemetry shutdown`);
+  }
+  /**
+   * Get buffered metrics (useful for testing/inspection)
+   */
+  getBuffer() {
+    return [...this.buffer];
+  }
+};
 
 // src/server/index.ts
 function createHealthCheck(info) {
@@ -527,6 +781,18 @@ function sanitizeInput(input) {
 // src/payment/index.ts
 var paymentConfig = null;
 function initPayment(config) {
+  if (isDemoMode()) {
+    paymentConfig = {
+      apiKey: "demo_key",
+      apiUrl: "https://api.openconductor.ai",
+      testMode: true,
+      upgradeUrl: "https://openconductor.ai/pricing"
+    };
+    return;
+  }
+  if (!config?.apiKey) {
+    throw new ConfigurationError("payment", "Payment requires apiKey in production mode. Set OPENCONDUCTOR_API_KEY or pass apiKey to initPayment().");
+  }
   paymentConfig = {
     apiUrl: "https://api.openconductor.ai",
     testMode: false,
@@ -537,6 +803,10 @@ function getPaymentConfig() {
   return paymentConfig;
 }
 async function checkBilling(params) {
+  if (isDemoMode()) {
+    demoLogger.billing(params.userId, MOCK_BILLING_STATUS);
+    return MOCK_BILLING_STATUS;
+  }
   const config = paymentConfig;
   if (!config) {
     throw new ConfigurationError("payment", "Payment not initialized. Call initPayment() first.");
@@ -577,6 +847,10 @@ async function checkBilling(params) {
   }
 }
 async function deductCredits(params) {
+  if (isDemoMode()) {
+    demoLogger.deduct(params.userId, params.credits, params.toolName);
+    return true;
+  }
   const config = paymentConfig;
   if (!config) return false;
   if (config.testMode) return true;
@@ -666,6 +940,9 @@ async function canUserAccess(userId, requirement, toolName = "check") {
   return checkBilling({ userId, requirement, toolName });
 }
 async function getUserBillingStatus(userId) {
+  if (isDemoMode()) {
+    return MOCK_USER_BILLING;
+  }
   const config = paymentConfig;
   if (!config) return null;
   if (config.testMode) {
@@ -684,6 +961,6 @@ async function getUserBillingStatus(userId) {
   }
 }
 
-export { AuthenticationError, AuthorizationError, ConfigurationError, DependencyError, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, Telemetry, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError, canUserAccess, createHealthCheck, createLogger, createPaidTool, getPaymentConfig, getTelemetry, getUserBillingStatus, initPayment, initTelemetry, requirePayment, schemas, validate, validateInput, wrapTool };
+export { AuthenticationError, AuthorizationError, ConfigurationError, DemoTelemetry, DependencyError, ErrorCodes, InsufficientCreditsError, MCPError, MOCK_BILLING_STATUS, MOCK_CREDIT_PACKS, MOCK_USER_BILLING, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, Telemetry, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError, canUserAccess, createHealthCheck, createLogger, createPaidTool, demoLogger, getConfig, getMockAnalytics, getPaymentConfig, getTelemetry, getUserBillingStatus, initOpenConductor, initPayment, initTelemetry, isDemoMode, isInitialized, requirePayment, resetConfig, schemas, validate, validateInput, wrapTool };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

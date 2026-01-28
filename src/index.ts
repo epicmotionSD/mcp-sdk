@@ -5,6 +5,26 @@
  * @packageDocumentation
  */
 
+// Configuration (NEW - single entry point for SDK init)
+export {
+  initOpenConductor,
+  getConfig,
+  isDemoMode,
+  isInitialized,
+  resetConfig,
+  type OpenConductorConfig,
+  type ResolvedConfig,
+} from './config'
+
+// Demo utilities (for advanced users / testing)
+export {
+  MOCK_BILLING_STATUS,
+  MOCK_USER_BILLING,
+  MOCK_CREDIT_PACKS,
+  getMockAnalytics,
+  demoLogger,
+} from './demo'
+
 // Error handling
 export {
   MCPError,
@@ -61,6 +81,7 @@ export {
   initTelemetry,
   getTelemetry,
   Telemetry,
+  DemoTelemetry,
   type TelemetryConfig,
   type ToolMetric,
   type TelemetryBatch,

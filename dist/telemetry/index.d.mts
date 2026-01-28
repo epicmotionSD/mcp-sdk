@@ -33,16 +33,18 @@ interface TelemetryBatch {
 }
 /**
  * Initialize telemetry for your MCP server
- * Call this once at startup with your OpenConductor API key
+ *
+ * In demo mode, this is optional - telemetry will log to console instead of API.
+ * Call this once at startup with your OpenConductor API key for production.
  */
-declare function initTelemetry(config: TelemetryConfig): Telemetry;
+declare function initTelemetry(config?: TelemetryConfig): Telemetry | DemoTelemetry;
 /**
  * Get the global telemetry instance (if initialized)
  */
-declare function getTelemetry(): Telemetry | null;
+declare function getTelemetry(): Telemetry | DemoTelemetry | null;
 declare class Telemetry {
     private config;
-    private buffer;
+    protected buffer: ToolMetric[];
     private flushTimer;
     constructor(config: TelemetryConfig);
     /**
@@ -57,8 +59,34 @@ declare class Telemetry {
      * Stop telemetry collection
      */
     shutdown(): void;
-    private log;
+    protected log(message: string, data?: Record<string, unknown>): void;
     private handleError;
 }
+/**
+ * Demo telemetry that logs to console instead of sending to API
+ * Automatically used in demo mode
+ */
+declare class DemoTelemetry {
+    private serverName;
+    private serverVersion;
+    private buffer;
+    constructor(serverName: string, serverVersion?: string);
+    /**
+     * Track a tool invocation - logs to console in demo mode
+     */
+    trackToolCall(tool: string, duration: number, success: boolean, error?: string): void;
+    /**
+     * Flush - in demo mode, just logs a summary
+     */
+    flush(): Promise<void>;
+    /**
+     * Shutdown - no-op in demo mode
+     */
+    shutdown(): void;
+    /**
+     * Get buffered metrics (useful for testing/inspection)
+     */
+    getBuffer(): ToolMetric[];
+}
 
-export { Telemetry, type TelemetryBatch, type TelemetryConfig, type ToolMetric, getTelemetry, initTelemetry };
+export { DemoTelemetry, Telemetry, type TelemetryBatch, type TelemetryConfig, type ToolMetric, getTelemetry, initTelemetry };

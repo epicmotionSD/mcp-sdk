@@ -32,10 +32,41 @@ npm install @openconductor/mcp-sdk
 
 **Requirements:** Node.js 18+
 
+## 🎮 Zero-Config Demo Mode
+
+**New in v1.4:** Start building immediately with no API key required!
+
+```typescript
+import { initOpenConductor, initTelemetry, requirePayment } from '@openconductor/mcp-sdk'
+
+// That's it! Demo mode activates automatically
+initOpenConductor({ serverName: 'my-server' })
+
+// All features work - telemetry logs to console, payments are mocked
+const telemetry = initTelemetry()  // Logs to console in demo mode
+const paidTool = requirePayment({ credits: 10 })(myHandler)  // Always allows, 9999 mock credits
+```
+
+Demo mode provides:
+- ✅ **Mock billing** — Always allowed, 9999 credits, no real charges
+- ✅ **Console telemetry** — All metrics logged locally for debugging
+- ✅ **Full type safety** — Same types and interfaces as production
+- ✅ **Zero setup** — Just import and go
+
+When you're ready for production, just add your API key:
+
+```typescript
+initOpenConductor({ 
+  apiKey: process.env.OPENCONDUCTOR_API_KEY,
+  serverName: 'my-server' 
+})
+```
+
 ## Quick Start
 
 ```typescript
 import { 
+  initOpenConductor,
   wrapTool, 
   validateInput, 
   z, 
@@ -43,12 +74,15 @@ import {
   initTelemetry 
 } from '@openconductor/mcp-sdk'
 
-// Optional: Enable observability
-initTelemetry({
-  apiKey: 'oc_xxx',  // Get free key at openconductor.ai
+// Initialize the SDK (demo mode if no API key)
+initOpenConductor({
   serverName: 'my-server',
-  serverVersion: '1.0.0'
+  serverVersion: '1.0.0',
+  // apiKey: 'oc_xxx'  // Add for production
 })
+
+// Enable observability (console in demo, API in production)
+initTelemetry()
 
 // Create a validated, wrapped tool in seconds
 const searchTool = wrapTool(
@@ -148,16 +182,22 @@ const safeTool = wrapTool(myHandler, {
 
 ### 📊 Telemetry
 
-Optional observability for production:
+Optional observability for production (console logging in demo mode):
 
 ```typescript
-import { initTelemetry } from '@openconductor/mcp-sdk/telemetry'
+import { initOpenConductor, initTelemetry } from '@openconductor/mcp-sdk'
 
-initTelemetry({
-  apiKey: 'oc_xxx',           // Free tier at openconductor.ai
+// Demo mode - logs to console
+initOpenConductor({ serverName: 'my-server' })
+initTelemetry()
+// [🎮 DEMO] Telemetry track: { tool: "search", duration: "45ms", success: true }
+
+// Production mode - sends to OpenConductor
+initOpenConductor({
+  apiKey: 'oc_xxx',
   serverName: 'my-server',
-  serverVersion: '1.0.0',
 })
+initTelemetry()
 
 // All wrapped tools automatically report:
 // ✓ Invocation counts
@@ -175,9 +215,15 @@ initTelemetry({
 Charge for your MCP tools with credits, subscriptions, or per-call:
 
 ```typescript
-import { initPayment, requirePayment } from '@openconductor/mcp-sdk/payment'
+import { initOpenConductor, initPayment, requirePayment } from '@openconductor/mcp-sdk'
 
-initPayment({ apiKey: 'oc_xxx' })
+// Demo mode - mock billing (always allowed, 9999 credits)
+initOpenConductor({ serverName: 'my-server' })
+initPayment()  // Auto-configures for demo mode
+
+// Production mode
+initOpenConductor({ apiKey: 'oc_xxx', serverName: 'my-server' })
+initPayment()
 
 // Credits-based
 const paidTool = requirePayment({ credits: 10 })(myHandler)

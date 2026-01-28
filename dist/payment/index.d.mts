@@ -46,6 +46,8 @@ interface BillingStatus {
 /**
  * Initialize payment/billing configuration
  *
+ * In demo mode, this is optional - mock billing will be used automatically.
+ *
  * @example
  * ```typescript
  * initPayment({
@@ -54,7 +56,7 @@ interface BillingStatus {
  * })
  * ```
  */
-declare function initPayment(config: PaymentConfig): void;
+declare function initPayment(config?: PaymentConfig): void;
 /**
  * Get current payment configuration
  */
