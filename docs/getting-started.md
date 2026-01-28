@@ -10,6 +10,32 @@ npm install @openconductor/mcp-sdk
 
 **Requirements:** Node.js 18+ 
 
+## Zero-Config Demo Mode (New in v1.4)
+
+Start building immediately with no API key required:
+
+```typescript
+import { initOpenConductor, initTelemetry } from '@openconductor/mcp-sdk'
+
+// Demo mode activates automatically - no API key needed!
+initOpenConductor({ serverName: 'my-server' })
+initTelemetry()  // Logs to console in demo mode
+
+// All features work:
+// ✅ Telemetry → Console logging
+// ✅ Payment → Mock billing (9999 credits, always allowed)
+// ✅ Full type safety
+```
+
+When ready for production, just add your API key:
+
+```typescript
+initOpenConductor({ 
+  apiKey: process.env.OPENCONDUCTOR_API_KEY,
+  serverName: 'my-server' 
+})
+```
+
 ## Your First MCP Server
 
 Here's a complete, production-ready MCP server in under 50 lines:
