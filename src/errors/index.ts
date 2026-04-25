@@ -211,7 +211,7 @@ export class InsufficientCreditsError extends MCPError {
  */
 export class SubscriptionRequiredError extends MCPError {
   constructor(requiredTier: string, currentTier?: string, options?: { upgradeUrl?: string }) {
-    const msg = currentTier 
+    const msg = currentTier
       ? `Subscription '${requiredTier}' required (current: '${currentTier}')`
       : `Subscription '${requiredTier}' required`
     super(ErrorCodes.SUBSCRIPTION_REQUIRED, msg, {
@@ -220,5 +220,56 @@ export class SubscriptionRequiredError extends MCPError {
       ...(options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }),
     })
     this.name = 'SubscriptionRequiredError'
+  }
+}
+
+// ============================================================================
+// Capability Mesh (v1.5.0)
+// ============================================================================
+
+/**
+ * Thrown when no MCP server in the registry can satisfy the requested
+ * capability for the given tenant and constraints.
+ */
+export class CapabilityUnavailableError extends MCPError {
+  constructor(capability: string, reason: string = 'no candidate server matched') {
+    super(
+      ErrorCodes.CAPABILITY_UNAVAILABLE,
+      `Capability '${capability}' unavailable: ${reason}`,
+      { capability, reason }
+    )
+    this.name = 'CapabilityUnavailableError'
+  }
+}
+
+/**
+ * Thrown when a resolution would exceed the tenant's budget — either the
+ * per-request budget cap supplied in the CapabilityRequest, or the
+ * remaining budget on the tenant's policy.
+ */
+export class BudgetExceededError extends MCPError {
+  constructor(capability: string, requested: number, available: number) {
+    super(
+      ErrorCodes.BUDGET_EXCEEDED,
+      `Budget exceeded for '${capability}': need ${requested}, have ${available}`,
+      { capability, requested, available }
+    )
+    this.name = 'BudgetExceededError'
+  }
+}
+
+/**
+ * Thrown when the Broker cannot find vault state for the requested tenant.
+ * This is the auto-onboarding hook point — consumers may catch this and
+ * trigger tenant provisioning before retrying the resolve.
+ */
+export class TenantNotProvisionedError extends MCPError {
+  constructor(tenantId: string, reason: string = 'no vault entry found') {
+    super(
+      ErrorCodes.TENANT_NOT_PROVISIONED,
+      `Tenant '${tenantId}' not provisioned: ${reason}`,
+      { tenantId, reason }
+    )
+    this.name = 'TenantNotProvisionedError'
   }
 }

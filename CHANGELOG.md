@@ -5,6 +5,43 @@ All notable changes to @openconductor/mcp-sdk will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — Capability Mesh skeleton (v1.5.0 RFC)
+
+### Added — types only, runtime ships in v1.5.1
+
+- **Capability Mesh schemas** (`@openconductor/mcp-sdk/resolve`)
+  - `CapabilityRequest` / `CapabilityResponse` Zod schemas + inferred types
+  - `CapabilityName` — namespaced verb format (`<resource>:<action>`)
+  - `CapabilityConstraints` — region / compliance / latency filters
+  - `CapabilityChunk` — streaming chunk shape for long-running capabilities
+  - `CapabilityDescriptor` — server summary returned by `list()` / `dryRun()`
+  - `DryRunResult` — pre-flight result with candidates, estimated cost, blockers
+
+- **Broker contract** (`@openconductor/mcp-sdk/broker`)
+  - `Broker` interface — `resolve` / `resolveStream` / `list` / `dryRun`
+  - `BrokerConfig` — placeholder runtime config shape
+  - `NotImplementedBroker` — stub that throws `ConfigurationError`; use it to
+    type-check integration code today, swap for the real impl in v1.5.1.
+
+- **New error classes** (`@openconductor/mcp-sdk/errors`)
+  - `CapabilityUnavailableError` (-32014) — registry produced no candidates
+  - `BudgetExceededError` (-32015) — request or tenant budget exhausted
+  - `TenantNotProvisionedError` (-32016) — vault has no entry for the tenant
+
+- **Architecture RFC** (`docs/architecture.md` + `docs/architecture/`)
+  - Mermaid diagrams + rendered PNGs of the high-level mesh and resolution flow
+  - Schema and Broker contract sketches in markdown form
+  - Open questions (registry source of truth, streaming protocol, fairness)
+
+### Notes
+
+- Package version is **not** bumped in this PR. The version bump to `1.5.0`
+  lands with the Broker runtime; this PR pins the contract only.
+- All additions are **purely additive** — existing exports and behaviors are
+  untouched.
+
+---
+
 ## [1.4.0] - 2025-01-28
 
 ### 🎮 Zero-Config Demo Mode

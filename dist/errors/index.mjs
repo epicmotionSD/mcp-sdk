@@ -19,7 +19,11 @@ var ErrorCodes = {
   CONFIGURATION_ERROR: -32010,
   PAYMENT_REQUIRED: -32011,
   INSUFFICIENT_CREDITS: -32012,
-  SUBSCRIPTION_REQUIRED: -32013
+  SUBSCRIPTION_REQUIRED: -32013,
+  // Capability Mesh (v1.5.0)
+  CAPABILITY_UNAVAILABLE: -32014,
+  BUDGET_EXCEEDED: -32015,
+  TENANT_NOT_PROVISIONED: -32016
 };
 
 // src/errors/index.ts
@@ -174,7 +178,37 @@ var SubscriptionRequiredError = class extends MCPError {
     this.name = "SubscriptionRequiredError";
   }
 };
+var CapabilityUnavailableError = class extends MCPError {
+  constructor(capability, reason = "no candidate server matched") {
+    super(
+      ErrorCodes.CAPABILITY_UNAVAILABLE,
+      `Capability '${capability}' unavailable: ${reason}`,
+      { capability, reason }
+    );
+    this.name = "CapabilityUnavailableError";
+  }
+};
+var BudgetExceededError = class extends MCPError {
+  constructor(capability, requested, available) {
+    super(
+      ErrorCodes.BUDGET_EXCEEDED,
+      `Budget exceeded for '${capability}': need ${requested}, have ${available}`,
+      { capability, requested, available }
+    );
+    this.name = "BudgetExceededError";
+  }
+};
+var TenantNotProvisionedError = class extends MCPError {
+  constructor(tenantId, reason = "no vault entry found") {
+    super(
+      ErrorCodes.TENANT_NOT_PROVISIONED,
+      `Tenant '${tenantId}' not provisioned: ${reason}`,
+      { tenantId, reason }
+    );
+    this.name = "TenantNotProvisionedError";
+  }
+};
 
-export { AuthenticationError, AuthorizationError, ConfigurationError, DependencyError, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };
+export { AuthenticationError, AuthorizationError, BudgetExceededError, CapabilityUnavailableError, ConfigurationError, DependencyError, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, TenantNotProvisionedError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

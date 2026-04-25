@@ -3,8 +3,7 @@ var ErrorCodes = {
   CONFIGURATION_ERROR: -32010,
   PAYMENT_REQUIRED: -32011,
   INSUFFICIENT_CREDITS: -32012,
-  SUBSCRIPTION_REQUIRED: -32013
-};
+  SUBSCRIPTION_REQUIRED: -32013};
 
 // src/errors/index.ts
 var MCPError = class extends Error {

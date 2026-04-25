@@ -50,6 +50,16 @@
       "types": "./dist/payment/index.d.ts",
       "import": "./dist/payment/index.mjs",
       "require": "./dist/payment/index.js"
+    },
+    "./resolve": {
+      "types": "./dist/resolve/index.d.ts",
+      "import": "./dist/resolve/index.mjs",
+      "require": "./dist/resolve/index.js"
+    },
+    "./broker": {
+      "types": "./dist/broker/index.d.ts",
+      "import": "./dist/broker/index.mjs",
+      "require": "./dist/broker/index.js"
     }
   },
   "files": [

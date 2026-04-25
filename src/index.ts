@@ -41,6 +41,9 @@ export {
   PaymentRequiredError,
   InsufficientCreditsError,
   SubscriptionRequiredError,
+  CapabilityUnavailableError,
+  BudgetExceededError,
+  TenantNotProvisionedError,
   ErrorCodes,
   type ErrorCode,
 } from './errors'
@@ -104,3 +107,23 @@ export {
   type BillingStatus,
   type RequirePaymentOptions,
 } from './payment'
+
+// Capability Mesh — schemas (v1.5.0)
+export {
+  CapabilityName,
+  CapabilityRequest,
+  CapabilityResponse,
+  CapabilityChunk,
+  CapabilityConstraints,
+  CapabilityDescriptor,
+  DryRunResult,
+} from './resolve'
+
+// Capability Mesh — Broker contract (v1.5.0)
+// Types only; runtime ships in v1.5.1. Use `NotImplementedBroker` to
+// type-check integration code today.
+export {
+  NotImplementedBroker,
+  type Broker,
+  type BrokerConfig,
+} from './broker'
