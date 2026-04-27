@@ -11,6 +11,8 @@ export default defineConfig({
     'server/index': 'src/server/index.ts',
     'telemetry/index': 'src/telemetry/index.ts',
     'payment/index': 'src/payment/index.ts',
+    'resolve/index': 'src/resolve/index.ts',
+    'broker/index': 'src/broker/index.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

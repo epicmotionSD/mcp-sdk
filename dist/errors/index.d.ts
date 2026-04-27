@@ -21,6 +21,9 @@ declare const ErrorCodes: {
     readonly PAYMENT_REQUIRED: -32011;
     readonly INSUFFICIENT_CREDITS: -32012;
     readonly SUBSCRIPTION_REQUIRED: -32013;
+    readonly CAPABILITY_UNAVAILABLE: -32014;
+    readonly BUDGET_EXCEEDED: -32015;
+    readonly TENANT_NOT_PROVISIONED: -32016;
 };
 type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
@@ -138,5 +141,28 @@ declare class SubscriptionRequiredError extends MCPError {
         upgradeUrl?: string;
     });
 }
+/**
+ * Thrown when no MCP server in the registry can satisfy the requested
+ * capability for the given tenant and constraints.
+ */
+declare class CapabilityUnavailableError extends MCPError {
+    constructor(capability: string, reason?: string);
+}
+/**
+ * Thrown when a resolution would exceed the tenant's budget — either the
+ * per-request budget cap supplied in the CapabilityRequest, or the
+ * remaining budget on the tenant's policy.
+ */
+declare class BudgetExceededError extends MCPError {
+    constructor(capability: string, requested: number, available: number);
+}
+/**
+ * Thrown when the Broker cannot find vault state for the requested tenant.
+ * This is the auto-onboarding hook point — consumers may catch this and
+ * trigger tenant provisioning before retrying the resolve.
+ */
+declare class TenantNotProvisionedError extends MCPError {
+    constructor(tenantId: string, reason?: string);
+}
 
-export { AuthenticationError, AuthorizationError, ConfigurationError, DependencyError, type ErrorCode, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };
+export { AuthenticationError, AuthorizationError, BudgetExceededError, CapabilityUnavailableError, ConfigurationError, DependencyError, type ErrorCode, ErrorCodes, InsufficientCreditsError, MCPError, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, TenantNotProvisionedError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError };

@@ -211,7 +211,11 @@ var ErrorCodes = {
   CONFIGURATION_ERROR: -32010,
   PAYMENT_REQUIRED: -32011,
   INSUFFICIENT_CREDITS: -32012,
-  SUBSCRIPTION_REQUIRED: -32013
+  SUBSCRIPTION_REQUIRED: -32013,
+  // Capability Mesh (v1.5.0)
+  CAPABILITY_UNAVAILABLE: -32014,
+  BUDGET_EXCEEDED: -32015,
+  TENANT_NOT_PROVISIONED: -32016
 };
 
 // src/errors/index.ts
@@ -364,6 +368,36 @@ var SubscriptionRequiredError = class extends MCPError {
       ...options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }
     });
     this.name = "SubscriptionRequiredError";
+  }
+};
+var CapabilityUnavailableError = class extends MCPError {
+  constructor(capability, reason = "no candidate server matched") {
+    super(
+      ErrorCodes.CAPABILITY_UNAVAILABLE,
+      `Capability '${capability}' unavailable: ${reason}`,
+      { capability, reason }
+    );
+    this.name = "CapabilityUnavailableError";
+  }
+};
+var BudgetExceededError = class extends MCPError {
+  constructor(capability, requested, available) {
+    super(
+      ErrorCodes.BUDGET_EXCEEDED,
+      `Budget exceeded for '${capability}': need ${requested}, have ${available}`,
+      { capability, requested, available }
+    );
+    this.name = "BudgetExceededError";
+  }
+};
+var TenantNotProvisionedError = class extends MCPError {
+  constructor(tenantId, reason = "no vault entry found") {
+    super(
+      ErrorCodes.TENANT_NOT_PROVISIONED,
+      `Tenant '${tenantId}' not provisioned: ${reason}`,
+      { tenantId, reason }
+    );
+    this.name = "TenantNotProvisionedError";
   }
 };
 function validate(schema, input, options = {}) {
@@ -962,6 +996,96 @@ async function getUserBillingStatus(userId) {
   }
 }
 
+// src/resolve/index.ts
+var CapabilityName = zod.z.string().regex(/^[a-z0-9_-]+:[a-z0-9_-]+$/, {
+  message: "capability must match '<resource>:<action>' (lowercase, hyphen/underscore allowed)"
+});
+var CapabilityConstraints = zod.z.object({
+  region: zod.z.enum(["us", "eu", "global"]).optional(),
+  compliance: zod.z.array(zod.z.enum(["soc2", "hipaa", "gdpr"])).optional(),
+  maxLatencyMs: zod.z.number().int().positive().optional()
+});
+var CapabilityRequest = zod.z.object({
+  capability: CapabilityName,
+  /** Tenant identifier — Broker uses this to look up vault state and policy. */
+  auth: zod.z.string().min(1),
+  /** Free-form tags to bias semantic ranking (e.g. ['fast', 'pre-build']). */
+  tags: zod.z.array(zod.z.string()).optional(),
+  /** Free-form description to bias semantic ranking. */
+  description: zod.z.string().optional(),
+  /** Per-request cost ceiling in USD. Broker rejects with BudgetExceededError. */
+  budget: zod.z.number().nonnegative().optional(),
+  /** Caller-supplied correlation id (UUID). Propagated to telemetry. */
+  traceId: zod.z.string().uuid().optional(),
+  constraints: CapabilityConstraints.optional()
+});
+var CapabilityResponse = zod.z.object({
+  /** Unique id for this resolution. Logged on telemetry events. */
+  resolutionId: zod.z.string().uuid(),
+  /** Identifier of the MCP server that handled the call. */
+  serverId: zod.z.string().min(1),
+  /** Server-shaped result payload. Type-erased at the SDK boundary. */
+  result: zod.z.unknown(),
+  /** Cost charged for this resolution in USD. */
+  costApplied: zod.z.number().nonnegative(),
+  /** End-to-end latency in milliseconds (Broker-measured). */
+  latencyMs: zod.z.number().int().nonnegative()
+});
+var CapabilityChunk = zod.z.object({
+  resolutionId: zod.z.string().uuid(),
+  /** Monotonically increasing sequence number within a stream. */
+  seq: zod.z.number().int().nonnegative(),
+  /** Server-shaped partial result. */
+  data: zod.z.unknown(),
+  /** True on the final chunk; followed by no further chunks. */
+  done: zod.z.boolean()
+});
+var CapabilityDescriptor = zod.z.object({
+  capability: CapabilityName,
+  serverId: zod.z.string().min(1),
+  costPerCall: zod.z.number().nonnegative(),
+  tags: zod.z.array(zod.z.string()).default([]),
+  compliance: zod.z.array(zod.z.string()).default([])
+});
+var DryRunResult = zod.z.object({
+  candidates: zod.z.array(CapabilityDescriptor),
+  estimatedCost: zod.z.number().nonnegative(),
+  blockers: zod.z.array(zod.z.string())
+});
+
+// src/broker/index.ts
+var NotImplementedBroker = class {
+  fail(method) {
+    throw new ConfigurationError(
+      "broker",
+      `Broker.${method}() runtime not yet wired (planned for v1.5.1). Use NotImplementedBroker only for type-checking integration code.`
+    );
+  }
+  async resolve(_req) {
+    this.fail("resolve");
+  }
+  resolveStream(_req) {
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          async next() {
+            throw new ConfigurationError(
+              "broker",
+              "Broker.resolveStream() runtime not yet wired (planned for v1.5.1)."
+            );
+          }
+        };
+      }
+    };
+  }
+  async list(_tenantId, _filter) {
+    this.fail("list");
+  }
+  async dryRun(_req) {
+    this.fail("dryRun");
+  }
+};
+
 Object.defineProperty(exports, "ZodError", {
   enumerable: true,
   get: function () { return zod.ZodError; }
@@ -972,20 +1096,31 @@ Object.defineProperty(exports, "z", {
 });
 exports.AuthenticationError = AuthenticationError;
 exports.AuthorizationError = AuthorizationError;
+exports.BudgetExceededError = BudgetExceededError;
+exports.CapabilityChunk = CapabilityChunk;
+exports.CapabilityConstraints = CapabilityConstraints;
+exports.CapabilityDescriptor = CapabilityDescriptor;
+exports.CapabilityName = CapabilityName;
+exports.CapabilityRequest = CapabilityRequest;
+exports.CapabilityResponse = CapabilityResponse;
+exports.CapabilityUnavailableError = CapabilityUnavailableError;
 exports.ConfigurationError = ConfigurationError;
 exports.DemoTelemetry = DemoTelemetry;
 exports.DependencyError = DependencyError;
+exports.DryRunResult = DryRunResult;
 exports.ErrorCodes = ErrorCodes;
 exports.InsufficientCreditsError = InsufficientCreditsError;
 exports.MCPError = MCPError;
 exports.MOCK_BILLING_STATUS = MOCK_BILLING_STATUS;
 exports.MOCK_CREDIT_PACKS = MOCK_CREDIT_PACKS;
 exports.MOCK_USER_BILLING = MOCK_USER_BILLING;
+exports.NotImplementedBroker = NotImplementedBroker;
 exports.PaymentRequiredError = PaymentRequiredError;
 exports.RateLimitError = RateLimitError;
 exports.ResourceNotFoundError = ResourceNotFoundError;
 exports.SubscriptionRequiredError = SubscriptionRequiredError;
 exports.Telemetry = Telemetry;
+exports.TenantNotProvisionedError = TenantNotProvisionedError;
 exports.TimeoutError = TimeoutError;
 exports.ToolExecutionError = ToolExecutionError;
 exports.ToolNotFoundError = ToolNotFoundError;

@@ -24,6 +24,11 @@ export const ErrorCodes = {
   PAYMENT_REQUIRED: -32011,
   INSUFFICIENT_CREDITS: -32012,
   SUBSCRIPTION_REQUIRED: -32013,
+
+  // Capability Mesh (v1.5.0)
+  CAPABILITY_UNAVAILABLE: -32014,
+  BUDGET_EXCEEDED: -32015,
+  TENANT_NOT_PROVISIONED: -32016,
 } as const
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes]

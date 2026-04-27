@@ -210,7 +210,11 @@ var ErrorCodes = {
   CONFIGURATION_ERROR: -32010,
   PAYMENT_REQUIRED: -32011,
   INSUFFICIENT_CREDITS: -32012,
-  SUBSCRIPTION_REQUIRED: -32013
+  SUBSCRIPTION_REQUIRED: -32013,
+  // Capability Mesh (v1.5.0)
+  CAPABILITY_UNAVAILABLE: -32014,
+  BUDGET_EXCEEDED: -32015,
+  TENANT_NOT_PROVISIONED: -32016
 };
 
 // src/errors/index.ts
@@ -363,6 +367,36 @@ var SubscriptionRequiredError = class extends MCPError {
       ...options?.upgradeUrl && { upgradeUrl: options.upgradeUrl }
     });
     this.name = "SubscriptionRequiredError";
+  }
+};
+var CapabilityUnavailableError = class extends MCPError {
+  constructor(capability, reason = "no candidate server matched") {
+    super(
+      ErrorCodes.CAPABILITY_UNAVAILABLE,
+      `Capability '${capability}' unavailable: ${reason}`,
+      { capability, reason }
+    );
+    this.name = "CapabilityUnavailableError";
+  }
+};
+var BudgetExceededError = class extends MCPError {
+  constructor(capability, requested, available) {
+    super(
+      ErrorCodes.BUDGET_EXCEEDED,
+      `Budget exceeded for '${capability}': need ${requested}, have ${available}`,
+      { capability, requested, available }
+    );
+    this.name = "BudgetExceededError";
+  }
+};
+var TenantNotProvisionedError = class extends MCPError {
+  constructor(tenantId, reason = "no vault entry found") {
+    super(
+      ErrorCodes.TENANT_NOT_PROVISIONED,
+      `Tenant '${tenantId}' not provisioned: ${reason}`,
+      { tenantId, reason }
+    );
+    this.name = "TenantNotProvisionedError";
   }
 };
 function validate(schema, input, options = {}) {
@@ -961,6 +995,96 @@ async function getUserBillingStatus(userId) {
   }
 }
 
-export { AuthenticationError, AuthorizationError, ConfigurationError, DemoTelemetry, DependencyError, ErrorCodes, InsufficientCreditsError, MCPError, MOCK_BILLING_STATUS, MOCK_CREDIT_PACKS, MOCK_USER_BILLING, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, Telemetry, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError, canUserAccess, createHealthCheck, createLogger, createPaidTool, demoLogger, getConfig, getMockAnalytics, getPaymentConfig, getTelemetry, getUserBillingStatus, initOpenConductor, initPayment, initTelemetry, isDemoMode, isInitialized, requirePayment, resetConfig, schemas, validate, validateInput, wrapTool };
+// src/resolve/index.ts
+var CapabilityName = z.string().regex(/^[a-z0-9_-]+:[a-z0-9_-]+$/, {
+  message: "capability must match '<resource>:<action>' (lowercase, hyphen/underscore allowed)"
+});
+var CapabilityConstraints = z.object({
+  region: z.enum(["us", "eu", "global"]).optional(),
+  compliance: z.array(z.enum(["soc2", "hipaa", "gdpr"])).optional(),
+  maxLatencyMs: z.number().int().positive().optional()
+});
+var CapabilityRequest = z.object({
+  capability: CapabilityName,
+  /** Tenant identifier — Broker uses this to look up vault state and policy. */
+  auth: z.string().min(1),
+  /** Free-form tags to bias semantic ranking (e.g. ['fast', 'pre-build']). */
+  tags: z.array(z.string()).optional(),
+  /** Free-form description to bias semantic ranking. */
+  description: z.string().optional(),
+  /** Per-request cost ceiling in USD. Broker rejects with BudgetExceededError. */
+  budget: z.number().nonnegative().optional(),
+  /** Caller-supplied correlation id (UUID). Propagated to telemetry. */
+  traceId: z.string().uuid().optional(),
+  constraints: CapabilityConstraints.optional()
+});
+var CapabilityResponse = z.object({
+  /** Unique id for this resolution. Logged on telemetry events. */
+  resolutionId: z.string().uuid(),
+  /** Identifier of the MCP server that handled the call. */
+  serverId: z.string().min(1),
+  /** Server-shaped result payload. Type-erased at the SDK boundary. */
+  result: z.unknown(),
+  /** Cost charged for this resolution in USD. */
+  costApplied: z.number().nonnegative(),
+  /** End-to-end latency in milliseconds (Broker-measured). */
+  latencyMs: z.number().int().nonnegative()
+});
+var CapabilityChunk = z.object({
+  resolutionId: z.string().uuid(),
+  /** Monotonically increasing sequence number within a stream. */
+  seq: z.number().int().nonnegative(),
+  /** Server-shaped partial result. */
+  data: z.unknown(),
+  /** True on the final chunk; followed by no further chunks. */
+  done: z.boolean()
+});
+var CapabilityDescriptor = z.object({
+  capability: CapabilityName,
+  serverId: z.string().min(1),
+  costPerCall: z.number().nonnegative(),
+  tags: z.array(z.string()).default([]),
+  compliance: z.array(z.string()).default([])
+});
+var DryRunResult = z.object({
+  candidates: z.array(CapabilityDescriptor),
+  estimatedCost: z.number().nonnegative(),
+  blockers: z.array(z.string())
+});
+
+// src/broker/index.ts
+var NotImplementedBroker = class {
+  fail(method) {
+    throw new ConfigurationError(
+      "broker",
+      `Broker.${method}() runtime not yet wired (planned for v1.5.1). Use NotImplementedBroker only for type-checking integration code.`
+    );
+  }
+  async resolve(_req) {
+    this.fail("resolve");
+  }
+  resolveStream(_req) {
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          async next() {
+            throw new ConfigurationError(
+              "broker",
+              "Broker.resolveStream() runtime not yet wired (planned for v1.5.1)."
+            );
+          }
+        };
+      }
+    };
+  }
+  async list(_tenantId, _filter) {
+    this.fail("list");
+  }
+  async dryRun(_req) {
+    this.fail("dryRun");
+  }
+};
+
+export { AuthenticationError, AuthorizationError, BudgetExceededError, CapabilityChunk, CapabilityConstraints, CapabilityDescriptor, CapabilityName, CapabilityRequest, CapabilityResponse, CapabilityUnavailableError, ConfigurationError, DemoTelemetry, DependencyError, DryRunResult, ErrorCodes, InsufficientCreditsError, MCPError, MOCK_BILLING_STATUS, MOCK_CREDIT_PACKS, MOCK_USER_BILLING, NotImplementedBroker, PaymentRequiredError, RateLimitError, ResourceNotFoundError, SubscriptionRequiredError, Telemetry, TenantNotProvisionedError, TimeoutError, ToolExecutionError, ToolNotFoundError, ValidationError, canUserAccess, createHealthCheck, createLogger, createPaidTool, demoLogger, getConfig, getMockAnalytics, getPaymentConfig, getTelemetry, getUserBillingStatus, initOpenConductor, initPayment, initTelemetry, isDemoMode, isInitialized, requirePayment, resetConfig, schemas, validate, validateInput, wrapTool };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map
